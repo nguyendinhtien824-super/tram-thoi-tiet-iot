@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trạm thời tiết IoT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{color-scheme:light;box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;padding:0}
+img{max-width:100%}
+[hidden]:not([hidden=until-found i]){display:none!important}
+
+:root {
+  --bg: #EDF1F3;
+  --surface: #FFFFFF;
+  --surface-2: #E3E9ED;
+  --fg: #0F1C26;
+  --muted: #52646F;
+  --line: #CBD5DB;
+  --accent: #0A6E96;
+  --on-accent: #FFFFFF;
+  --temp: #C4561A;
+  --hum: #0A6E96;
+  --alert: #BE2A2A;
+  --alert-bg: #FBE5E2;
+  --on-alert: #FFFFFF;
+  --ok: #22744A;
+  --display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B141B;
+    --surface: #121F29;
+    --surface-2: #1A2B37;
+    --fg: #DDE8EE;
+    --muted: #8DA1AD;
+    --line: #273A48;
+    --accent: #4DB8E8;
+    --on-accent: #06222F;
+    --temp: #F08A4B;
+    --hum: #4DB8E8;
+    --alert: #FF6B6B;
+    --alert-bg: #3A1A1D;
+    --on-alert: #2A0A0A;
+    --ok: #5BC98A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B141B;
+  --surface: #121F29;
+  --surface-2: #1A2B37;
+  --fg: #DDE8EE;
+  --muted: #8DA1AD;
+  --line: #273A48;
+  --accent: #4DB8E8;
+  --on-accent: #06222F;
+  --temp: #F08A4B;
+  --hum: #4DB8E8;
+  --alert: #FF6B6B;
+  --alert-bg: #3A1A1D;
+  --on-alert: #2A0A0A;
+  --ok: #5BC98A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+.wrap {
+  max-width: 1160px;
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Header */
+.site { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+.site .wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 24px; padding-block: 8px; min-height: 56px; }
+.brand { font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: 1.05rem; color: var(--fg); text-decoration: none; white-space: nowrap; }
+.site nav { display: flex; gap: 2px; margin-left: auto; overflow-x: auto; min-width: 0; }
+.site nav a { padding: 8px 10px; color: var(--muted); text-decoration: none; font-size: .92rem; white-space: nowrap; }
+.site nav a:hover { color: var(--fg); }
+.theme-btn { font: inherit; font-size: .85rem; padding: 6px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; border-radius: 3px; }
+.theme-btn:hover { background: var(--surface-2); }
+@media (max-width: 700px) {
+  .site nav { order: 3; width: 100%; margin-left: 0; }
+  .theme-btn { margin-left: auto; }
+}
+
+/* Hero */
+.hero { position: relative; overflow: hidden; padding-block: 48px 56px; }
+#isobars { position: absolute; right: -10%; top: 50%; transform: translateY(-50%); width: 72%; aspect-ratio: 3 / 2; height: auto; fill: none; stroke: var(--line); stroke-width: 1.2; pointer-events: none; }
+.hero .wrap { position: relative; }
+.eyebrow { margin: 0; font-family: var(--mono); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 12px 0 16px; font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: clamp(2.3rem, 6.2vw, 4.4rem); line-height: 1.02; letter-spacing: -.01em; text-wrap: balance; }
+.lede { margin: 0; max-width: 62ch; font-size: 1.1rem; }
+.status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 28px 0 12px; font-family: var(--mono); font-size: .82rem; }
+.pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid var(--line); background: var(--surface); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: pulse 2s ease-in-out infinite; }
+.dot.paused { background: var(--muted); animation: none; }
+.dot.off { background: var(--alert); animation: none; }
+@keyframes pulse { 50% { opacity: .35; } }
+.status .muted { color: var(--muted); }
+
+.banner { margin: 0 0 12px; padding: 12px 16px; background: var(--alert); color: var(--on-alert); font-weight: 600; }
+
+.readouts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--surface); }
+.cell { padding: 20px 22px; border-left: 1px solid var(--line); min-width: 0; transition: background .3s; }
+.cell:first-child { border-left: 0; }
+.cell.is-alert { background: var(--alert-bg); }
+.cell-label { margin: 0; font-family: var(--mono); font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cell-value { margin: 6px 0 10px; font-family: var(--mono); font-weight: 500; font-size: clamp(2.2rem, 4.6vw, 3.3rem); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cell-value small { font-size: .42em; color: var(--muted); margin-left: 4px; }
+.cell.is-alert .cell-value { color: var(--alert); }
+.cell-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+.chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 8px; border: 1px solid currentColor; font-weight: 500; }
+.chip.ok { color: var(--ok); }
+.chip.warn { color: var(--alert); }
+.chip.info { color: var(--accent); }
+.meter { flex: 1 1 80px; height: 6px; background: var(--surface-2); min-width: 60px; }
+.meter span { display: block; height: 100%; width: 0; background: var(--hum); transition: width .4s; }
+.obs { margin: 12px 0 0; font-family: var(--mono); font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .readouts { grid-template-columns: 1fr; }
+  .cell { border-left: 0; border-top: 1px solid var(--line); }
+  .cell:first-child { border-top: 0; }
+  #isobars { width: 150%; right: -50%; }
+}
+
+/* Sections */
+.section { padding-block: 72px; border-top: 1px solid var(--line); scroll-margin-top: 72px; }
+@media (max-width: 700px) { .section { scroll-margin-top: 110px; padding-block: 56px; } }
+h2 { margin: 0 0 12px; font-family: var(--display); font-stretch: 115%; font-weight: 800; font-size: clamp(1.6rem, 3.4vw, 2.3rem); line-height: 1.1; text-wrap: balance; }
+h3 { margin: 0 0 8px; font-family: var(--display); font-stretch: 105%; font-weight: 700; font-size: 1.1rem; }
+.intro { margin: 0 0 32px; max-width: 62ch; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); padding: 20px; border-radius: 4px; min-width: 0; }
+
+.btn { font: inherit; font-size: .92rem; padding: 9px 14px; border: 1px solid var(--fg); background: transparent; color: var(--fg); cursor: pointer; border-radius: 3px; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Dashboard */
+.dash { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.stack { display: grid; gap: 24px; min-width: 0; }
+@media (max-width: 920px) { .dash { grid-template-columns: minmax(0, 1fr); } }
+.chart-block + .chart-block { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; margin-bottom: 6px; }
+.chart-head h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.swatch { width: 14px; height: 3px; display: inline-block; }
+.swatch.t { background: var(--temp); }
+.swatch.h { background: var(--hum); }
+.chart-head span.note { font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+.chart { display: block; width: 100%; height: 190px; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .tick { fill: var(--muted); font: 11px var(--mono); }
+.chart .thr { stroke: var(--alert); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.chart .thr-label { fill: var(--alert); font: 11px var(--mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+.chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .line.t { stroke: var(--temp); }
+.chart .line.h { stroke: var(--hum); }
+.chart .area { stroke: none; fill-opacity: .12; }
+.chart .area.t { fill: var(--temp); }
+.chart .area.h { fill: var(--hum); }
+.chart .last { stroke: var(--surface); stroke-width: 2; }
+.chart .last.t { fill: var(--temp); }
+.chart .last.h { fill: var(--hum); }
+.chart .last.alert { fill: var(--alert); }
+
+.field { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.field label { font-size: .95rem; }
+.field .input-wrap { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: .85rem; color: var(--muted); }
+.field input { width: 84px; font: inherit; font-family: var(--mono); font-size: .95rem; padding: 6px 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 3px; }
+.hint { margin: 12px 0 0; font-size: .85rem; color: var(--muted); }
+.log { list-style: none; margin: 8px 0 0; padding: 0; }
+.log li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: .9rem; }
+.log time { font-family: var(--mono); font-size: .8rem; color: var(--muted); padding-top: 2px; }
+.log li.warn .msg::before { content: "▲ "; color: var(--alert); }
+.log li.ok .msg::before { content: "● "; color: var(--ok); }
+.empty { margin: 8px 0 0; color: var(--muted); font-size: .9rem; }
+.src-line { margin: 0 0 12px; font-family: var(--mono); font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.src-line b { color: var(--fg); font-weight: 500; }
+.sim-box { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* Architecture */
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.step { border-top: 3px solid var(--fg); padding-top: 14px; }
+.step .n { font-family: var(--mono); font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.step h3 { margin-top: 6px; }
+.step p { margin: 0; color: var(--muted); font-size: .94rem; }
+@media (max-width: 980px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .flow { grid-template-columns: minmax(0, 1fr); } }
+.payload { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; margin-top: 48px; align-items: start; }
+@media (max-width: 820px) { .payload { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+.payload p { margin: 0 0 8px; color: var(--muted); }
+pre { margin: 0; padding: 16px; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); font-family: var(--mono); font-size: .85rem; line-height: 1.6; border-radius: 4px; }
+
+/* Hardware table */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; }
+table { width: 100%; border-collapse: collapse; min-width: 560px; }
+th, td { text-align: left; padding: 12px 16px; border-top: 1px solid var(--line); vertical-align: top; font-size: .94rem; }
+thead th { border-top: 0; font-family: var(--mono); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--surface-2); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td.layer { font-family: var(--mono); font-size: .82rem; color: var(--muted); white-space: nowrap; }
+.circuit { margin-top: 20px; }
+
+/* Results */
+.results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.result { border-top: 3px solid var(--ok); padding-top: 14px; }
+.result p { margin: 0; color: var(--muted); font-size: .94rem; }
+@media (max-width: 820px) { .results { grid-template-columns: minmax(0, 1fr); } }
+.future { margin-top: 48px; }
+.future ul { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.future li { padding: 8px 12px; border: 1px dashed var(--muted); font-size: .92rem; }
+
+/* Team */
+.team { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 4px; }
+.member { padding: 18px 20px; border-top: 1px solid var(--line); min-width: 0; }
+.member:nth-child(-n+2) { border-top: 0; }
+.member:nth-child(even) { border-left: 1px solid var(--line); }
+.member b { display: block; font-family: var(--display); font-stretch: 112%; font-weight: 700; font-size: 1.1rem; }
+.member span { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+@media (max-width: 560px) {
+  .team { grid-template-columns: minmax(0, 1fr); }
+  .member:nth-child(2) { border-top: 1px solid var(--line); }
+  .member:nth-child(even) { border-left: 0; }
+}
+.refs { margin: 40px 0 0; padding: 0 0 0 1.4em; font-size: .88rem; color: var(--muted); }
+.refs li { margin-bottom: 8px; padding-left: 4px; }
+.refs-title { margin-top: 48px; }
+
+footer { border-top: 1px solid var(--line); padding-block: 28px; font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">Trạm thời tiết IoT</a>
+    <nav aria-label="Điều hướng chính">
+      <a href="#dashboard">Bảng theo dõi</a>
+      <a href="#kien-truc">Kiến trúc</a>
+      <a href="#phan-cung">Phần cứng</a>
+      <a href="#ket-qua">Kết quả</a>
+      <a href="#nhom">Nhóm</a>
+    </nav>
+    <button class="theme-btn" id="theme-btn" type="button" aria-label="Đổi giao diện sáng hoặc tối">Sáng / Tối</button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <svg id="isobars" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+    <div class="wrap">
+      <p class="eyebrow">Nhóm 8 · PBL + RBL · Quan trắc môi trường</p>
+      <h1>Trạm thời tiết IoT</h1>
+      <p class="lede">Trạm đo dùng vi điều khiển ESP32 đọc nhiệt độ, độ ẩm và mức mưa, gửi lên ThingSpeak qua Wi-Fi. Trang này đọc dữ liệu đó theo thời gian thực và báo ngay khi một thông số vượt ngưỡng.</p>
+
+      <div class="status">
+        <span class="pill"><span class="dot paused" id="dot"></span><span id="mode">Đang kết nối ThingSpeak…</span></span>
+        <span class="muted" id="last-update">Cập nhật --:--:-- (GMT+7)</span>
+      </div>
+
+      <div class="banner" id="banner" role="status" aria-live="polite" hidden></div>
+
+      <div class="readouts">
+        <div class="cell" id="cell-temp">
+          <p class="cell-label">Nhiệt độ</p>
+          <p class="cell-value"><span id="v-temp">--.-</span><small>°C</small></p>
+          <div class="cell-foot"><span class="chip ok" id="chip-temp">Bình thường</span><span id="thr-temp">Ngưỡng 35 °C</span></div>
+        </div>
+        <div class="cell" id="cell-hum">
+          <p class="cell-label">Độ ẩm tương đối</p>
+          <p class="cell-value"><span id="v-hum">--</span><small>%RH</small></p>
+          <div class="cell-foot"><span class="chip ok" id="chip-hum">Bình thường</span><span id="thr-hum">Ngưỡng 85 %RH</span></div>
+        </div>
+        <div class="cell" id="cell-rain">
+          <p class="cell-label">Cảm biến mưa</p>
+          <p class="cell-value" style="font-size: clamp(1.7rem, 3.4vw, 2.4rem)"><span id="v-rain">--</span></p>
+          <div class="cell-foot"><span class="chip info" id="chip-rain">Trời khô</span><div class="meter" aria-hidden="true"><span id="rain-bar"></span></div><span id="rain-int">0 %</span></div>
+        </div>
+      </div>
+      <p class="obs" id="obs">OBS --:--:-- GMT+7</p>
+    </div>
+  </section>
+
+  <section class="section" id="dashboard">
+    <div class="wrap">
+      <h2>Bảng theo dõi</h2>
+      <p class="intro">Hai biểu đồ ghi lại 40 lần đo gần nhất của kênh ThingSpeak. Đường nét đứt là ngưỡng cảnh báo bạn đặt; khi giá trị vượt qua, thẻ số liệu đổi màu và nhật ký ghi lại thời điểm.</p>
+
+      <div class="dash">
+        <div class="panel">
+          <div class="chart-block">
+            <div class="chart-head">
+              <h3><span class="swatch t"></span>Nhiệt độ (°C)</h3>
+              <span class="note" id="note-temp">Ngưỡng 35 °C</span>
+            </div>
+            <svg class="chart" id="chart-t" role="img" aria-label="Biểu đồ nhiệt độ"></svg>
+          </div>
+          <div class="chart-block">
+            <div class="chart-head">
+              <h3><span class="swatch h"></span>Độ ẩm tương đối (%RH)</h3>
+              <span class="note" id="note-hum">Ngưỡng 85 %RH</span>
+            </div>
+            <svg class="chart" id="chart-h" role="img" aria-label="Biểu đồ độ ẩm"></svg>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="panel">
+            <h3>Ngưỡng cảnh báo</h3>
+            <div class="field">
+              <label for="in-temp">Nhiệt độ tối đa</label>
+              <span class="input-wrap"><input id="in-temp" type="number" step="0.5" min="10" max="50" value="35"> °C</span>
+            </div>
+            <div class="field">
+              <label for="in-hum">Độ ẩm tối đa</label>
+              <span class="input-wrap"><input id="in-hum" type="number" step="1" min="10" max="100" value="85"> %RH</span>
+            </div>
+            <p class="hint">Cảnh báo bật khi giá trị đo lớn hơn ngưỡng và chỉ tắt khi giá trị giảm xuống thấp hơn ngưỡng 0,5 °C (hoặc 2 %RH), để cảnh báo không nhấp nháy. Ngưỡng được nhớ trong trình duyệt này.</p>
+          </div>
+
+          <div class="panel">
+            <h3>Nhật ký cảnh báo</h3>
+            <p class="empty" id="log-empty">Chưa có cảnh báo trong phiên này.</p>
+            <ol class="log" id="log"></ol>
+          </div>
+
+          <div class="panel">
+            <h3>Nguồn dữ liệu</h3>
+            <p class="src-line">Kênh ThingSpeak <b>#3547064</b> · tải lại mỗi 10 giây</p>
+            <div class="btn-row">
+              <button class="btn" id="btn-source" type="button">Chuyển sang mô phỏng</button>
+            </div>
+            <p class="hint" id="src-hint">Đang đọc dữ liệu thật từ trạm. Nếu mất mạng, trang tự chuyển sang mô phỏng và tự quay lại khi kết nối trở lại.</p>
+
+            <div class="sim-box" id="sim-controls" hidden>
+              <div class="btn-row">
+                <button class="btn primary" id="btn-heat" type="button">Giả lập nắng nóng</button>
+                <button class="btn primary" id="btn-rain" type="button">Giả lập mưa lớn</button>
+                <button class="btn" id="btn-pause" type="button">Tạm dừng</button>
+              </div>
+              <p class="hint">Ở chế độ mô phỏng, số liệu do trình duyệt tạo ra để trình diễn, không phải dữ liệu từ trạm.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="kien-truc">
+    <div class="wrap">
+      <h2>Kiến trúc hệ thống</h2>
+      <p class="intro">Dữ liệu đi một chiều từ cảm biến đến trình duyệt của người dùng, qua bốn chặng.</p>
+      <div class="flow">
+        <div class="step">
+          <div class="n">Bước 1</div>
+          <h3>Cảm biến</h3>
+          <p>DHT22 đo nhiệt độ và độ ẩm không khí. Tín hiệu analog từ cảm biến mưa (mô phỏng bằng biến trở) đưa vào chân ADC.</p>
+        </div>
+        <div class="step">
+          <div class="n">Bước 2</div>
+          <h3>ESP32</h3>
+          <p>Đọc cảm biến mỗi 2 giây, hiển thị lên LCD 1602 I2C ngay tại trạm, bỏ qua các lần đọc lỗi (NaN).</p>
+        </div>
+        <div class="step">
+          <div class="n">Bước 3</div>
+          <h3>Wi-Fi tích hợp</h3>
+          <p>Gửi HTTP GET lên ThingSpeak mỗi 20 giây (gói miễn phí giới hạn 15 giây một lần ghi) và tự nối lại Wi-Fi khi mất mạng.</p>
+        </div>
+        <div class="step">
+          <div class="n">Bước 4</div>
+          <h3>ThingSpeak và web</h3>
+          <p>ThingSpeak lưu dữ liệu, trang web đọc qua REST API, so với ngưỡng người dùng đặt và hiển thị cảnh báo.</p>
+        </div>
+      </div>
+
+      <div class="payload">
+        <div>
+          <h3>Gói dữ liệu mỗi lần đo</h3>
+          <p>Thiết bị gửi ba trường: field1 là nhiệt độ (°C), field2 là độ ẩm (%RH), field3 là mức mưa (0 đến 100 %). ThingSpeak tự gắn thời điểm theo giờ UTC, trang web đổi sang GMT+7 khi hiển thị. Web coi là có mưa khi mức mưa lớn hơn 10 %.</p>
+        </div>
+        <pre><code>{
+  "created_at": "2026-10-23T03:42:21Z",
+  "field1": "24.0",
+  "field2": "40",
+  "field3": "0"
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="phan-cung">
+    <div class="wrap">
+      <h2>Phần cứng và phần mềm</h2>
+      <p class="intro">Mạch được dựng và chạy trên Wokwi (mô phỏng ESP32 có kết nối Internet thật). Firmware viết bằng C/C++ trên nền Arduino.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Linh kiện</th><th>Vai trò trong hệ thống</th><th>Nhóm</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>ESP32 DevKit</td><td>Bộ xử lý trung tâm có Wi-Fi tích hợp: đọc cảm biến, điều khiển LCD và gửi dữ liệu lên máy chủ.</td><td class="layer">Xử lý, truyền thông</td></tr>
+            <tr><td>DHT22</td><td>Đo nhiệt độ và độ ẩm không khí, nối chân dữ liệu vào GPIO15.</td><td class="layer">Cảm biến</td></tr>
+            <tr><td>Biến trở (mô phỏng cảm biến mưa)</td><td>Cho tín hiệu analog vào GPIO34 (ADC 12 bit), quy đổi 0 đến 100 %. Ngoài thực tế thay bằng cảm biến mưa FC-37 hoặc YL-83.</td><td class="layer">Cảm biến</td></tr>
+            <tr><td>LCD 1602 I2C</td><td>Hiển thị thông số tại trạm, nối SDA vào GPIO21, SCL vào GPIO22, địa chỉ 0x27.</td><td class="layer">Hiển thị</td></tr>
+            <tr><td>ThingSpeak</td><td>Nhận dữ liệu từ ESP32, lưu lịch sử và cung cấp REST API cho trang web đọc.</td><td class="layer">Nền tảng IoT</td></tr>
+            <tr><td>Wokwi, Arduino (C/C++)</td><td>Dựng mạch mô phỏng, viết và nạp firmware. Mạch ban đầu thiết kế trên Tinkercad với Arduino UNO.</td><td class="layer">Phần mềm</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="circuit btn-row">
+        <a class="btn" href="https://wokwi.com/projects/478641424787167233" target="_blank" rel="noopener">Mở mạch mô phỏng trên Wokwi ↗</a>
+        <a class="btn" href="https://www.tinkercad.com/things/5tIDhhw75vq-magnificent-inari-jaagub?sharecode=k--hJOe8M1SLYXPgZnha-CIYoVUGPrtnoiUEBMAB9VY" target="_blank" rel="noopener">Mạch thiết kế ban đầu trên Tinkercad ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="ket-qua">
+    <div class="wrap">
+      <h2>Kết quả thử nghiệm</h2>
+      <p class="intro">Mạch được chạy trên Wokwi và dữ liệu thật sự đi qua Internet đến ThingSpeak rồi về trang này.</p>
+      <div class="results">
+        <div class="result">
+          <h3>Truyền dữ liệu thành công</h3>
+          <p>ESP32 gửi nhiệt độ, độ ẩm và mức mưa lên ThingSpeak theo chu kỳ 20 giây, máy chủ trả mã HTTP 200.</p>
+        </div>
+        <div class="result">
+          <h3>Hiển thị khớp nhau</h3>
+          <p>Giá trị trên LCD tại trạm, biểu đồ ThingSpeak và trang web này trùng nhau trong cùng thời điểm.</p>
+        </div>
+        <div class="result">
+          <h3>Cảnh báo vượt ngưỡng</h3>
+          <p>Khi nhiệt độ hoặc độ ẩm vượt ngưỡng người dùng đặt, giao diện đổi màu, hiện thanh cảnh báo và ghi vào nhật ký.</p>
+        </div>
+      </div>
+      <div class="future">
+        <h3>Hướng phát triển</h3>
+        <ul>
+          <li>Pin mặt trời cho trạm đặt ở nơi xa</li>
+          <li>Học máy dự báo ngắn hạn tại chỗ</li>
+          <li>Thông báo đẩy qua Telegram hoặc ứng dụng điện thoại</li>
+          <li>Dùng MQTT và HTTPS để tăng bảo mật</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="nhom">
+    <div class="wrap">
+      <h2>Nhóm thực hiện</h2>
+      <p class="intro">Nhóm 8, đề tài kết hợp PBL và RBL.</p>
+      <div class="team">
+        <div class="member"><b>Le Hoang Cau</b><span>Nhóm B</span></div>
+        <div class="member"><b>Nguyen Dinh Tien</b><span>Nhóm B</span></div>
+        <div class="member"><b>Ha Van Sang</b><span>Nhóm F · Giao diện web</span></div>
+        <div class="member"><b>Thai Quang Huy</b><span>Nhóm F · Giao diện web</span></div>
+      </div>
+
+      <h3 class="refs-title">Tài liệu tham khảo</h3>
+      <ol class="refs">
+        <li>NevonProjects, "IOT Weather Reporting System," NevonProjects Technical Reports, 2016.</li>
+        <li>S. M. R. Islam, D. Kwak, M. D. H. Kabir, M. Hossain, and K. S. Kwak, "The Internet of Things for Health Care: A Comprehensive Survey," IEEE Access, vol. 3, pp. 678–708, 2015.</li>
+        <li>A. Tripathy, A. K. Ray, and S. P. Mohanty, "Smart Weather Monitoring and Alarm System Using IoT," IEEE Consumer Electronics Magazine, vol. 8, no. 4, pp. 46–50, 2019.</li>
+        <li>M. T. Lazarescu, "Design of a Wireless Sensor Network Platform for Low-Power Environmental Monitoring Applications," IEEE Sensors Journal, vol. 13, no. 3, pp. 1086–1097, 2013.</li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Nhóm 8 · PBL + RBL · Hệ thống báo cáo thời tiết IoT · ESP32, DHT22, ThingSpeak</div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var N = 40, SIM_STEP = 2500, TZ = 'Asia/Ho_Chi_Minh';
+  var CHANNEL_ID = '3547064';
+  var FEED_URL = 'https://api.thingspeak.com/channels/' + CHANNEL_ID + '/feeds.json?results=' + N;
+  var POLL_MS = 10000;      // chu kỳ tải dữ liệu thật
+  var STALE_MS = 90000;     // quá 90 giây không có bản ghi mới thì coi là trạm ngoại tuyến
+  var RAIN_ON = 10;         // mức mưa (%) lớn hơn giá trị này thì coi là có mưa
+  var HYS = { t: 0.5, h: 2 };
+  var root = document.documentElement;
+
+  function $(id) { return document.getElementById(id); }
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+  function fmtTime(ts) {
+    try { return new Date(ts).toLocaleTimeString('vi-VN', { hour12: false, timeZone: TZ }); }
+    catch (e) { return new Date(ts).toTimeString().slice(0, 8); }
+  }
+
+  /* ---------- Giao diện sáng / tối ---------- */
+  function effectiveTheme() {
+    var a = root.getAttribute('data-theme');
+    if (a) return a;
+    return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  try {
+    var savedTheme = localStorage.getItem('wx-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') root.setAttribute('data-theme', savedTheme);
+  } catch (e) {}
+  $('theme-btn').addEventListener('click', function () {
+    var n = effectiveTheme() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', n);
+    try { localStorage.setItem('wx-theme', n); } catch (e) {}
+  });
+
+  /* ---------- Đường đẳng áp trang trí ---------- */
+  (function isobars() {
+    var cx = 300, cy = 200, out = '';
+    for (var k = 1; k <= 9; k++) {
+      var r = k * 26, pts = [];
+      for (var a = 0; a <= 360; a += 6) {
+        var th = a * Math.PI / 180;
+        var rr = r * (1 + 0.10 * Math.sin(2 * th + k * 0.5) + 0.06 * Math.sin(3 * th - k * 0.3));
+        pts.push((cx + rr * 1.5 * Math.cos(th)).toFixed(1) + ' ' + (cy + rr * Math.sin(th)).toFixed(1));
+      }
+      out += '<path d="M' + pts.join(' L') + 'Z"/>';
+    }
+    $('isobars').innerHTML = out;
+  })();
+
+  /* ---------- Trạng thái ---------- */
+  var thr = { t: 35, h: 85 };
+  try {
+    var s = JSON.parse(localStorage.getItem('wx-thr') || 'null');
+    if (s && isFinite(s.t) && isFinite(s.h)) thr = { t: +s.t, h: +s.h };
+  } catch (e) {}
+  $('in-temp').value = thr.t;
+  $('in-hum').value = thr.h;
+
+  var forcedSim = false;     // người dùng chủ động chọn mô phỏng
+  var autoSim = false;       // tự chuyển sang mô phỏng vì mất kết nối
+  var failCount = 0;
+  var paused = false;
+  var sim = { heat: 0, rain: 0 };
+  var simData = [];
+  var liveData = [];
+  var data = [];
+  var prevAlert = { t: false, h: false };
+  var logItems = [];
+
+  function isSim() { return forcedSim || autoSim; }
+
+  /* ---------- Dữ liệu mô phỏng ---------- */
+  function step(prev, ts) {
+    var rainOn;
+    if (sim.rain > 0) { rainOn = true; sim.rain--; }
+    else if (prev.rain) { rainOn = Math.random() > 0.12; }
+    else { rainOn = Math.random() < 0.03; }
+    var heat = sim.heat > 0;
+    if (heat) sim.heat--;
+    var tt = heat ? 38.5 : (rainOn ? 27.5 : 31.5);
+    var th = rainOn ? 92 : (heat ? 60 : 68);
+    var t = clamp(prev.t + (tt - prev.t) * 0.3 + (Math.random() - 0.5) * 0.6, 22, 44);
+    var h = clamp(prev.h + (th - prev.h) * 0.3 + (Math.random() - 0.5) * 2, 42, 99);
+    var inten = rainOn ? clamp((prev.int || 20) + (Math.random() - 0.4) * 30, 8, 100) : 0;
+    return { ts: ts, t: +t.toFixed(1), h: Math.round(h), rain: rainOn, int: Math.round(inten) };
+  }
+
+  (function prefill() {
+    var now = Date.now();
+    var prev = { t: 31, h: 68, rain: false, int: 0 };
+    for (var i = N - 1; i >= 0; i--) {
+      prev = step(prev, now - i * SIM_STEP);
+      simData.push(prev);
+    }
+    sim.heat = 0; sim.rain = 0;
+  })();
+
+  /* ---------- Dữ liệu thật từ ThingSpeak ---------- */
+  function parseFeeds(json) {
+    var feeds = (json && json.feeds) || [];
+    var rows = [];
+    feeds.forEach(function (f) {
+      var t = parseFloat(f.field1), h = parseFloat(f.field2), m = parseFloat(f.field3);
+      var ts = Date.parse(f.created_at);
+      if (!isFinite(t) || !isFinite(h) || !isFinite(ts)) return;
+      var inten = isFinite(m) ? clamp(Math.round(m), 0, 100) : 0;
+      rows.push({ ts: ts, t: +t.toFixed(1), h: Math.round(h), rain: inten > RAIN_ON, int: inten });
+    });
+    return rows.slice(-N);
+  }
+
+  function loadLive() {
+    if (forcedSim) return;
+    fetch(FEED_URL, { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        var rows = parseFeeds(j);
+        if (!rows.length) throw new Error('Kênh chưa có dữ liệu');
+        liveData = rows;
+        failCount = 0;
+        if (autoSim) { autoSim = false; resetAlerts(); }
+        if (!forcedSim) { data = liveData; render(); }
+      })
+      .catch(function () {
+        failCount++;
+        if (failCount >= 2 && !autoSim && !forcedSim) {
+          autoSim = true;
+          data = simData;
+          resetAlerts();
+        }
+        render();
+      });
+  }
+
+  /* ---------- Biểu đồ SVG ---------- */
+  function drawChart(svg, key, o) {
+    if (!data.length) { svg.innerHTML = ''; return; }
+    var W = svg.clientWidth || (svg.parentNode && svg.parentNode.clientWidth) || 600, H = 190;
+    var pl = 38, pr = 10, pt = 12, pb = 26;
+    var iw = W - pl - pr, ih = H - pt - pb;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    function X(i) { return pl + i * iw / (N - 1); }
+    function Y(v) { return pt + (1 - (clamp(v, o.min, o.max) - o.min) / (o.max - o.min)) * ih; }
+    var out = '';
+    o.ticks.forEach(function (tk) {
+      var y = Y(tk).toFixed(1);
+      out += '<line class="grid" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y + '" y2="' + y + '"/>' +
+             '<text class="tick" x="' + (pl - 8) + '" y="' + y + '" text-anchor="end" dominant-baseline="middle">' + tk + '</text>';
+    });
+    var off = N - data.length;
+    var pts = data.map(function (d, i) { return [X(i + off), Y(d[key])]; });
+    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    var base = pt + ih;
+    var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + base + ' L' + pts[0][0].toFixed(1) + ' ' + base + ' Z';
+    if (o.thr >= o.min && o.thr <= o.max) {
+      var ty = Y(o.thr).toFixed(1);
+      out += '<line class="thr" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + ty + '" y2="' + ty + '"/>' +
+             '<text class="thr-label" x="' + (W - pr - 4) + '" y="' + (ty - 5) + '" text-anchor="end">Ngưỡng ' + o.thr + ' ' + o.unit + '</text>';
+    }
+    out += '<path class="area ' + o.cls + '" d="' + area + '"/><path class="line ' + o.cls + '" d="' + line + '"/>';
+    var lp = pts[pts.length - 1], lv = data[data.length - 1][key];
+    out += '<circle class="last ' + (lv > o.thr ? 'alert' : o.cls) + '" cx="' + lp[0].toFixed(1) + '" cy="' + lp[1].toFixed(1) + '" r="4.5"/>';
+    var yl = H - 6;
+    out += '<text class="tick" x="' + pl + '" y="' + yl + '" text-anchor="start">' + fmtTime(data[0].ts) + '</text>' +
+           '<text class="tick" x="' + (pl + iw / 2).toFixed(1) + '" y="' + yl + '" text-anchor="middle">' + fmtTime(data[Math.floor(data.length / 2)].ts) + '</text>' +
+           '<text class="tick" x="' + (W - pr) + '" y="' + yl + '" text-anchor="end">' + fmtTime(data[data.length - 1].ts) + '</text>';
+    svg.innerHTML = out;
+    svg.setAttribute('aria-label', o.label + ': hiện tại ' + lv + ' ' + o.unit + ', ngưỡng ' + o.thr + ' ' + o.unit);
+  }
+
+  function drawCharts() {
+    drawChart($('chart-t'), 't', { min: 0, max: 50, ticks: [0, 10, 20, 30, 40, 50], thr: thr.t, unit: '°C', cls: 't', label: 'Biểu đồ nhiệt độ' });
+    drawChart($('chart-h'), 'h', { min: 0, max: 100, ticks: [0, 25, 50, 75, 100], thr: thr.h, unit: '%RH', cls: 'h', label: 'Biểu đồ độ ẩm' });
+  }
+
+  /* ---------- Nhật ký cảnh báo ---------- */
+  function resetAlerts() {
+    prevAlert = { t: false, h: false };
+    logItems = [];
+    $('log').innerHTML = '';
+    $('log-empty').hidden = false;
+  }
+
+  function addLog(text, warn, ts) {
+    logItems.unshift({ text: text, warn: warn, ts: ts });
+    if (logItems.length > 8) logItems.pop();
+    $('log').innerHTML = logItems.map(function (it) {
+      return '<li class="' + (it.warn ? 'warn' : 'ok') + '"><time>' + fmtTime(it.ts) + '</time><span class="msg">' + it.text + '</span></li>';
+    }).join('');
+    $('log-empty').hidden = true;
+  }
+
+  function evaluate(d) {
+    // Có trễ (hysteresis): đã báo thì chỉ tắt khi giá trị xuống thấp hơn ngưỡng một khoảng nhỏ
+    var ta = prevAlert.t ? d.t > thr.t - HYS.t : d.t > thr.t;
+    var ha = prevAlert.h ? d.h > thr.h - HYS.h : d.h > thr.h;
+    if (ta !== prevAlert.t) addLog(ta ? 'Nhiệt độ ' + d.t.toFixed(1) + ' °C vượt ngưỡng ' + thr.t + ' °C' : 'Nhiệt độ đã trở lại dưới ngưỡng', ta, d.ts);
+    if (ha !== prevAlert.h) addLog(ha ? 'Độ ẩm ' + d.h + ' %RH vượt ngưỡng ' + thr.h + ' %RH' : 'Độ ẩm đã trở lại dưới ngưỡng', ha, d.ts);
+    prevAlert.t = ta; prevAlert.h = ha;
+    return { ta: ta, ha: ha };
+  }
+
+  function setChip(el, alert) {
+    el.className = 'chip ' + (alert ? 'warn' : 'ok');
+    el.textContent = alert ? '▲ Vượt ngưỡng' : 'Bình thường';
+  }
+
+  /* ---------- Trạng thái nguồn dữ liệu ---------- */
+  function updateStatus(d) {
+    var txt, dotCls = '';
+    if (isSim()) {
+      if (autoSim) { txt = 'Mô phỏng dự phòng · mất kết nối ThingSpeak'; dotCls = 'off'; }
+      else if (paused) { txt = 'Mô phỏng · đã tạm dừng'; dotCls = 'paused'; }
+      else { txt = 'Mô phỏng · đang chạy'; }
+    } else if (!d) {
+      txt = 'Đang kết nối ThingSpeak…'; dotCls = 'paused';
+    } else if (Date.now() - d.ts > STALE_MS) {
+      txt = 'Trạm ngoại tuyến · bản ghi cuối lúc ' + fmtTime(d.ts); dotCls = 'off';
+    } else {
+      txt = 'Trực tuyến · ThingSpeak';
+    }
+    $('mode').textContent = txt;
+    $('dot').className = 'dot' + (dotCls ? ' ' + dotCls : '');
+    $('sim-controls').hidden = !isSim();
+    $('btn-source').textContent = isSim() ? 'Chuyển sang dữ liệu thật' : 'Chuyển sang mô phỏng';
+    $('src-hint').textContent = autoSim
+      ? 'Không tải được dữ liệu từ ThingSpeak nên trang đang dùng mô phỏng. Trang vẫn thử kết nối lại và sẽ tự quay về dữ liệu thật.'
+      : (forcedSim
+        ? 'Bạn đang chọn chế độ mô phỏng. Bấm nút trên để quay lại dữ liệu thật.'
+        : 'Đang đọc dữ liệu thật từ trạm. Nếu mất mạng, trang tự chuyển sang mô phỏng và tự quay lại khi kết nối trở lại.');
+  }
+
+  /* ---------- Vẽ lại giao diện ---------- */
+  function render() {
+    var d = data.length ? data[data.length - 1] : null;
+    updateStatus(d);
+    $('thr-temp').textContent = 'Ngưỡng ' + thr.t + ' °C';
+    $('thr-hum').textContent = 'Ngưỡng ' + thr.h + ' %RH';
+    $('note-temp').textContent = 'Ngưỡng ' + thr.t + ' °C';
+    $('note-hum').textContent = 'Ngưỡng ' + thr.h + ' %RH';
+    if (!d) { drawCharts(); return; }
+
+    var ev = evaluate(d);
+
+    $('v-temp').textContent = d.t.toFixed(1);
+    $('v-hum').textContent = d.h;
+    $('v-rain').textContent = d.rain ? 'Đang mưa' : 'Không mưa';
+    $('chip-rain').textContent = d.rain ? 'Có mưa' : 'Trời khô';
+    $('rain-bar').style.width = d.int + '%';
+    $('rain-int').textContent = d.int + ' %';
+
+    setChip($('chip-temp'), ev.ta);
+    setChip($('chip-hum'), ev.ha);
+    $('cell-temp').classList.toggle('is-alert', ev.ta);
+    $('cell-hum').classList.toggle('is-alert', ev.ha);
+
+    var msgs = [];
+    if (ev.ta) msgs.push('Nhiệt độ ' + d.t.toFixed(1) + ' °C vượt ngưỡng ' + thr.t + ' °C');
+    if (ev.ha) msgs.push('Độ ẩm ' + d.h + ' %RH vượt ngưỡng ' + thr.h + ' %RH');
+    var banner = $('banner');
+    banner.textContent = '▲ Cảnh báo: ' + msgs.join(' · ');
+    banner.hidden = msgs.length === 0;
+
+    var tm = fmtTime(d.ts);
+    $('last-update').textContent = 'Cập nhật ' + tm + ' (GMT+7)';
+    $('obs').textContent = 'OBS ' + tm + ' GMT+7 · T ' + d.t.toFixed(1) + ' °C · RH ' + d.h + ' %RH · MƯA ' + (d.rain ? 'CÓ ' + d.int + '%' : 'KHÔNG');
+
+    drawCharts();
+  }
+
+  function simTick() {
+    if (!isSim() || paused) return;
+    var prev = simData[simData.length - 1];
+    simData.push(step(prev, Date.now()));
+    if (simData.length > N) simData.shift();
+    data = simData;
+    render();
+  }
+
+  /* ---------- Sự kiện ---------- */
+  function saveThr() { try { localStorage.setItem('wx-thr', JSON.stringify(thr)); } catch (e) {} }
+  $('in-temp').addEventListener('input', function (e) {
+    var v = parseFloat(e.target.value);
+    if (isFinite(v)) { thr.t = v; saveThr(); render(); }
+  });
+  $('in-hum').addEventListener('input', function (e) {
+    var v = parseFloat(e.target.value);
+    if (isFinite(v)) { thr.h = v; saveThr(); render(); }
+  });
+
+  $('btn-source').addEventListener('click', function () {
+    resetAlerts();
+    if (isSim()) {
+      forcedSim = false; autoSim = false; failCount = 0;
+      data = liveData;
+      render();
+      loadLive();
+    } else {
+      forcedSim = true;
+      data = simData;
+      render();
+    }
+  });
+
+  function setPaused(p) {
+    paused = p;
+    $('btn-pause').textContent = paused ? 'Tiếp tục' : 'Tạm dừng';
+    render();
+  }
+  $('btn-heat').addEventListener('click', function () { sim.heat = 12; if (paused) setPaused(false); });
+  $('btn-rain').addEventListener('click', function () { sim.rain = 12; if (paused) setPaused(false); });
+  $('btn-pause').addEventListener('click', function () { setPaused(!paused); });
+
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () { drawCharts(); });
+    ro.observe($('chart-t'));
+    ro.observe($('chart-h'));
+  } else {
+    window.addEventListener('resize', drawCharts);
+  }
+
+  render();
+  loadLive();
+  setInterval(loadLive, POLL_MS);
+  setInterval(simTick, SIM_STEP);
+})();
+</script>
+
+</body>
+</html>
